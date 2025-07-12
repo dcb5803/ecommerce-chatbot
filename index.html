@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice CHAITANYA BABU Shopping Assistant</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    .chat-box {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .bubble {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 10px;
+      clear: both;
+    }
+    .user { background: #dcf8c6; text-align: right; }
+    .bot  { background: #eee; text-align: left; }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    img {
+      width: 120px;
+      margin-top: 8px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-box">
+    <h2>🛍️ Voice chaitanya babu Shopping Assistant</h2>
+    <div id="conversation"></div>
+    <button onclick="startVoice()">🎤 Speak</button>
+    <p><strong>Cart Items:</strong> <span id="itemCount">0</span> | <strong>Total:</strong> $<span id="total">0.00</span></p>
+  </div>
+
+  <script>
+    const products = {
+      shirts: {
+        name: "Cotton Shirt",
+        price: 25.00,
+        image: "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcR29kmWEuK-DE2RVSWnVVWHgeHAHFsxZ6uQW6awK1C7N8I5VHGLGrZuvI-BlzH1uhqxoRDBMK5bUUHpWjsq1Nm8Ug5cLoBQ7OJvFQexaW2W_x8mL7xSvQqb"
+      },
+      shoes: {
+        name: "Running Shoes",
+        price: 49.99,
+        image: "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcRLY5iMXx2zNymhXgrj8tze_CYtR2bgvmOch61wOTbGPqxgy63Qd7gt-Nl-tOwCvV5A2Iw7U1hi5gjuy4XfZLKt5vZbHGFoZa_PBpLB3-wFc1WA45ChFuOJNaw"
+      }
+    };
+
+    let cart = [];
+
+    function startVoice() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const query = event.results[0][0].transcript.toLowerCase();
+        addChatBubble(query, 'user');
+        handleVoiceCommand(query);
+      };
+
+      recognition.onerror = function(event) {
+        alert("Voice error: " + event.error);
+      };
+    }
+
+    function speak(text) {
+      const synth = window.speechSynthesis;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.voice = synth.getVoices().find(v =>
+        v.name.toLowerCase().includes("female") ||
+        v.name.toLowerCase().includes("google us english")
+      ) || synth.getVoices()[0];
+      synth.speak(utter);
+      addChatBubble(text, 'bot');
+    }
+
+    function addChatBubble(text, sender) {
+      const div = document.createElement('div');
+      div.className = 'bubble ' + sender;
+      div.innerText = text;
+      document.getElementById("conversation").appendChild(div);
+      div.scrollIntoView();
+    }
+
+    function showImage(imgUrl) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      document.getElementById("conversation").appendChild(img);
+      img.scrollIntoView();
+    }
+
+    function updateCartDisplay() {
+      document.getElementById("itemCount").innerText = cart.length;
+      const total = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
+      document.getElementById("total").innerText = total;
+    }
+
+    function handleVoiceCommand(query) {
+      const q = query
+        .replace(/t[- ]?shirt(s)?/g, "shirt")
+        .replace(/shirts?/g, "shirt")
+        .replace(/shoes?/g, "shoe");
+
+      // Add shirt/shoe
+      if (q.includes("add") || q.includes("buy")) {
+        if (q.includes("shirt")) {
+          cart.push(products.shirts);
+          speak("Shirt added to your cart.");
+          showImage(products.shirts.image);
+        } else if (q.includes("shoe")) {
+          cart.push(products.shoes);
+          speak("Shoes added to your cart.");
+          showImage(products.shoes.image);
+        }
+        updateCartDisplay();
+        return;
+      }
+
+      // Delete shirt/shoe
+      if (q.includes("delete") || q.includes("remove")) {
+        if (q.includes("shirt")) {
+          const index = cart.findIndex(item => item.name === products.shirts.name);
+          if (index !== -1) {
+            cart.splice(index, 1);
+            speak("Shirt removed from your cart.");
+            showImage(products.shirts.image);
+          } else {
+            speak("No shirts found in cart.");
+          }
+        } else if (q.includes("shoe")) {
+          const index = cart.findIndex(item => item.name === products.shoes.name);
+          if (index !== -1) {
+            cart.splice(index, 1);
+            speak("Shoes removed from your cart.");
+            showImage(products.shoes.image);
+          } else {
+            speak("No shoes found in cart.");
+          }
+        }
+        updateCartDisplay();
+        return;
+      }
+
+      // Show cart items
+      if (q.includes("show") && q.includes("cart")) {
+        if (cart.length === 0) {
+          speak("Your cart is empty.");
+        } else {
+          const summary = cart.map(p => p.name).join(", ");
+          speak("You have " + summary + " in your cart.");
+          cart.forEach(item => showImage(item.image));
+        }
+        return;
+      }
+
+      // Cart status
+      if (q.includes("cart status") || q.includes("items in cart")) {
+        if (cart.length === 0) {
+          speak("Your cart is empty.");
+        } else {
+          const counts = {};
+          cart.forEach(item => counts[item.name] = (counts[item.name] || 0) + 1);
+          const result = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ");
+          speak("You have " + result + " in your cart.");
+          cart.forEach(item => showImage(item.image));
+        }
+        return;
+      }
+
+      // Total items
+      if (q.includes("total")) {
+        const total = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
+        speak(`You have ${cart.length} items in your cart. Total is $${total}.`);
+        return;
+      }
+
+      speak("Sorry, I didn't understand that. Try saying 'add shirt', 'delete shoe', or 'cart status'.");
+    }
+  </script>
+</body>
+</html>
